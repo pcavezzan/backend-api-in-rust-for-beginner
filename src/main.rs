@@ -1,8 +1,9 @@
 use rocket::{get, routes};
+use serde_json::{json, Value};
 
 #[get("/")]
-async fn hello() -> &'static str {
-    "Hello, world!\n"
+async fn hello() -> Value {
+    json!({ "message": "Hello, world!" })
 }
 
 #[rocket::main]
