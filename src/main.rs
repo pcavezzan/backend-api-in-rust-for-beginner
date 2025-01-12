@@ -1,5 +1,5 @@
 use rocket::response::status;
-use rocket::{delete, get, post, put, routes};
+use rocket::{catch, catchers, delete, get, post, put, routes};
 use serde_json::{json, Value};
 #[get("/rustaceans")]
 fn get_rustaceans() -> Value {
@@ -26,6 +26,19 @@ fn delete_rustacean(_id: u32) -> status::NoContent {
     status::NoContent
 }
 
+#[catch(404)]
+fn not_found() -> Value {
+    json!({ "message": "Not Found" })
+}
+
+#[catch(422)]
+fn unprocessable_entity() -> Value {
+    json!({
+        "message": "Unprocessable Entity",
+        "details": "The request was well-formed but was unable to be followed due to semantic errors."
+    })
+}
+
 #[rocket::main]
 async fn main() {
     let _ = rocket::build()
@@ -39,6 +52,7 @@ async fn main() {
                 delete_rustacean
             ],
         )
+        .register("/", catchers![not_found, unprocessable_entity])
         .launch()
         .await;
 }
