@@ -85,6 +85,11 @@ fn not_found() -> Value {
     json!({ "message": "Not Found" })
 }
 
+#[catch(401)]
+fn unauthorized() -> Value {
+    json!({ "message": "Unauthorized" })
+}
+
 #[catch(422)]
 fn unprocessable_entity() -> Value {
     json!({
@@ -106,7 +111,7 @@ async fn main() {
                 delete_rustacean
             ],
         )
-        .register("/", catchers![not_found, unprocessable_entity])
+        .register("/", catchers![not_found, unauthorized, unprocessable_entity])
         .launch()
         .await;
 }
