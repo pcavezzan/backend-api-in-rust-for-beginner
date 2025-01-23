@@ -45,7 +45,9 @@ impl<'r> rocket::request::FromRequest<'r> for BasicAuth {
         let auth_header = request.headers().get_one("Authorization");
         if let Some(auth_header_value) = auth_header {
             if let Some(basic_auth) = BasicAuth::from_authorization_header(auth_header_value) {
-                return Outcome::Success(basic_auth);
+                if basic_auth.username == "foo" && basic_auth.password == "bar" {
+                    return Outcome::Success(basic_auth);
+                }
             }
         }
         Outcome::Error((Status::Unauthorized, ()))
