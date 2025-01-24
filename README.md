@@ -7,3 +7,5 @@ This project is the result of udemy rust course called [Back-end web development
 ## Original Source Code from Course
 
 [Rust Chat](https://gitlab.com/udemy-paris/rocket-app.git)
+
+To run this project, create a file `database.sqlite` at project root level.
