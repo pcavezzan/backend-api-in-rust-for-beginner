@@ -2,11 +2,15 @@ mod auth;
 
 use rocket::response::status;
 use rocket::{catch, catchers, delete, get, post, put, routes};
+use rocket_sync_db_pools::database;
 use serde_json::{json, Value};
 use crate::auth::BasicAuth;
 
+#[database("sqlite_db")]
+struct DbConn(diesel::SqliteConnection);
+
 #[get("/rustaceans")]
-fn get_rustaceans(_auth: BasicAuth) -> Value {
+fn get_rustaceans(_auth: BasicAuth, db: DbConn) -> Value {
     json!([{ "id": 1, "name": "John Doe" }, { "id": 2, "name": "Jane Doe"}])
 }
 
@@ -62,6 +66,7 @@ async fn main() {
             ],
         )
         .register("/", catchers![not_found, unauthorized, unprocessable_entity])
+        .attach(DbConn::fairing())
         .launch()
         .await;
 }
