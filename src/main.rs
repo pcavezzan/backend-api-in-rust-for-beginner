@@ -1,16 +1,16 @@
 mod auth;
-mod schema;
 mod model;
+mod repositories;
+mod schema;
 
-use diesel::prelude::*;
-use rocket::response::status;
-use rocket::{catch, catchers, delete, get, post, put, routes};
-use rocket::serde::json::Json;
-use rocket_sync_db_pools::database;
-use serde_json::{json, Value};
 use crate::auth::BasicAuth;
 use crate::model::{NewRustacean, Rustacean};
-use crate::schema::rustaceans;
+use crate::repositories::RustaceanRepositories;
+use rocket::response::status;
+use rocket::serde::json::Json;
+use rocket::{catch, catchers, delete, get, post, put, routes};
+use rocket_sync_db_pools::database;
+use serde_json::{json, Value};
 
 #[database("sqlite_db")]
 struct DbConn(diesel::SqliteConnection);
@@ -18,61 +18,60 @@ struct DbConn(diesel::SqliteConnection);
 #[get("/rustaceans")]
 async fn get_rustaceans(_auth: BasicAuth, db: DbConn) -> Value {
     // json!([{ "id": 1, "name": "John Doe" }, { "id": 2, "name": "Jane Doe"}])
-    db.run(|c|{
-        let rustaceans = rustaceans::table
-            .order(rustaceans::id.desc())
-            .limit(1000)
-            .load::<Rustacean>(c)
-            .expect("Error loading rustaceans");
+    db.run(|c| {
+        let rustaceans =
+            RustaceanRepositories::find_all(c, 1000).expect("Error loading rustaceans");
         json!(rustaceans)
-    }).await
+    })
+    .await
 }
 
 #[get("/rustaceans/<id>")]
 async fn get_rustacean(id: i32, _auth: BasicAuth, db: DbConn) -> Value {
-    db.run(move |c|{
-        let rustacean = rustaceans::table
-            .find(id)
-            .get_result::<Rustacean>(c)
-        .expect("Error loading rustaceans");
+    db.run(move |c| {
+        let rustacean = RustaceanRepositories::find(c, id).expect("Error loading rustaceans");
         json!(rustacean)
-    }).await
+    })
+    .await
 }
 
 #[post("/rustaceans", format = "json", data = "<new_rustaceans>")]
-async fn create_rustacean(_auth: BasicAuth, db: DbConn, new_rustaceans: Json<NewRustacean>) -> Value {
-    db.run(|c|{
-        let result = diesel::insert_into(rustaceans::table)
-        .values(&new_rustaceans.into_inner())
-        .execute(c)
-        .expect("Error saving new rustacean");
+async fn create_rustacean(
+    _auth: BasicAuth,
+    db: DbConn,
+    new_rustaceans: Json<NewRustacean>,
+) -> Value {
+    db.run(|c| {
+        let result = RustaceanRepositories::create(c, new_rustaceans.into_inner())
+            .expect("Error saving new rustacean");
         json!(result)
-    }).await
+    })
+    .await
 }
 
 #[put("/rustaceans/<id>", format = "json", data = "<rustacean>")]
-async fn update_rustacean(id: i32, _auth: BasicAuth, db: DbConn, rustacean: Json<Rustacean>) -> Value {
-    db.run(move |c|{
+async fn update_rustacean(
+    id: i32,
+    _auth: BasicAuth,
+    db: DbConn,
+    rustacean: Json<Rustacean>,
+) -> Value {
+    db.run(move |c| {
         let rustacean_inner = rustacean.into_inner();
-        let result = diesel::update(rustaceans::table.find(id))
-            .set((
-                rustaceans::name.eq(rustacean_inner.name),
-                rustaceans::email.eq(rustacean_inner.email),
-            ))
-            .execute(c)
+        let result = RustaceanRepositories::save(c, id, rustacean_inner)
             .expect("Error updating rustacean");
         json!(result)
-    }).await
+    })
+    .await
 }
 
 #[delete("/rustaceans/<id>")]
 async fn delete_rustacean(id: i32, _auth: BasicAuth, db: DbConn) -> status::NoContent {
-    db.run(move |c|{
-        diesel::delete(rustaceans::table.find(id))
-            .execute(c)
-            .expect("Error deleting rustacean");
+    db.run(move |c| {
+        RustaceanRepositories::delete(c, id).expect("Error deleting rustacean");
         status::NoContent
-    }).await
+    })
+    .await
 }
 
 #[catch(404)]
@@ -106,7 +105,10 @@ async fn main() {
                 delete_rustacean
             ],
         )
-        .register("/", catchers![not_found, unauthorized, unprocessable_entity])
+        .register(
+            "/",
+            catchers![not_found, unauthorized, unprocessable_entity],
+        )
         .attach(DbConn::fairing())
         .launch()
         .await;
