@@ -17,7 +17,6 @@ struct DbConn(diesel::SqliteConnection);
 
 #[get("/rustaceans")]
 async fn get_rustaceans(_auth: BasicAuth, db: DbConn) -> Value {
-    // json!([{ "id": 1, "name": "John Doe" }, { "id": 2, "name": "Jane Doe"}])
     db.run(|c| {
         let rustaceans =
             RustaceanRepositories::find_all(c, 1000).expect("Error loading rustaceans");
