@@ -78,9 +78,13 @@ async fn delete_rustacean(
     db: DbConn,
 ) -> Result<status::NoContent, Custom<Value>> {
     db.run(move |c| {
-        RustaceanRepositories::delete(c, id)
+        RustaceanRepositories::find(c, id)
+            .map(|_| RustaceanRepositories::delete(c, id))
             .map(|_| status::NoContent)
-            .map_err(|e| Custom(Status::InternalServerError, json!(e.to_string())))
+            .map_err(|e| match e {
+                NotFound => Custom(Status::NotFound, json!(e.to_string())),
+                _ => Custom(Status::InternalServerError, json!(e.to_string())),
+            })
     })
     .await
 }
